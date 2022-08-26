@@ -1,9 +1,7 @@
-#from PIL import Image
 import mysql.connector
 import requests
 import json
 import os
-#from io import BytesIO
 
 mydb = mysql.connector.connect(
     host = "localhost",
@@ -47,10 +45,11 @@ else:
 #Prints the Pokemon party nicely
 def NicePokeParty():
     print("\n Your current party is:")
-    for p in pokeParty:
+    mycursor.execute(f"SELECT * FROM {userdex}")
+    partyResult = mycursor.fetchall()
+
+    for p in partyResult:
         print(p)
-    if len(pokeParty) == 0:
-        print("No pokemon in party yet")
 
 #Prompts the user on the main menu
 def WhatDo():
@@ -109,20 +108,32 @@ def Praise():
 
 #Add a pokemon to the user's party
 def AddPoke():
-    add = input("\n Which pokemon would you like to add to your party? (name or number)")
+    add = input("\n Which pokemon would you like to add to your party? (name only for now)")
     if add in pokeList:
-        pokeParty.append(add)
+        #only add if not in DB already
+        mycursor.execute(f"SELECT * FROM {userdex} WHERE name = '{add}'")
+        if mycursor.fetchone() == None:
+            print("Pokemon not in party yet, adding now")
+            addsql = f"INSERT INTO {userdex} (number, name) VALUES (%s, %s)"
+            addval = (f"{pokeList.index(add)+1}", f"{add}")
+            mycursor.execute(addsql, addval)
+            mydb.commit()
+        else:
+            print("Pokemon already in your party - no duplicates allowed!")
+
     else:
         print("Not found in pokedex - please try again")
 
 #Remove a pokemon from a user's party
 def RemovePoke():
-    print("\n Remove from your party")
-    rem = input("\n Which pokemon would you like to remove from your party? (name or number)")
-    if rem in pokeParty:
-        pokeParty.remove(rem)
+    rem = input("\n Which pokemon would you like to remove from your party? (name only for now)")
+    delsql = (f"DELETE FROM {userdex} WHERE name = '{rem}'")
+    mycursor.execute(delsql)
+    mydb.commit()
+    if mycursor.rowcount == 0:
+        print("Pokemon not found, could not delete")
     else:
-        print("Not found in Party - please try again")
+        print("Pokemon removed from party")
 
 
 def main():
